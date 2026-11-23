@@ -2,207 +2,144 @@ import { useEffect, useMemo, useState } from "react";
 import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import {
   Activity, ArrowRight, Bell, BriefcaseBusiness, ChartNoAxesCombined, CheckCircle2, ChevronDown,
-  CircleHelp, GraduationCap, LayoutDashboard, LockKeyhole, LogOut, Menu, MessageCircle,
-  Search, Settings, ShieldCheck, Sparkles, Users, X, BookOpen, Target, CalendarDays,
-  FileText, UserRound, Eye, EyeOff, Plus, Pencil, UserX
+  GraduationCap, LayoutDashboard, LockKeyhole, LogOut, Menu, MessageCircle, Search, Settings,
+  ShieldCheck, Sparkles, Users, X, BookOpen, Target, CalendarDays, FileText, UserRound, Eye, EyeOff,
+  Plus, Pencil, UserX, Trash2, Save, SlidersHorizontal, User, KeyRound, Globe, Moon, Sun,
+  Building2, ClipboardList, BrainCircuit, Award, Network, Mail, BarChart3, LifeBuoy, Download,
+  Bookmark, Send, Clock, Briefcase, Heart, Languages
 } from "lucide-react";
 import { api, getToken } from "./api";
 
-type User = { id: string; fullName: string; email: string; role: string; status?: string; avatarUrl?: string };
+type User = { id: string; fullName: string; email: string; role: string; status?: string; avatarUrl?: string; emailVerified?: boolean; createdAt?: string; lastLoginAt?: string };
 const roleLabel: Record<string,string> = { ADMIN:"Administrator", STUDENT:"Student", JOB_SEEKER:"Job Seeker", EMPLOYER:"Employer", MENTOR:"Mentor" };
-
-function App() {
-  const [user, setUser] = useState<User | null>(null);
-  const [checking, setChecking] = useState(true);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const nav = useNavigate();
-  const location = useLocation();
-
-  useEffect(() => {
-    if (!getToken()) { setChecking(false); return; }
-    api("/auth/me").then((d) => setUser(d.user)).catch(() => localStorage.removeItem("skillnex_token")).finally(() => setChecking(false));
-  }, []);
-
-  function signedIn(u: User, token: string, remember: boolean) {
-    if (remember) localStorage.setItem("skillnex_token", token);
-    else sessionStorage.setItem("skillnex_token", token);
-    setUser(u); nav("/");
-  }
-  function logout() {
-    localStorage.removeItem("skillnex_token"); sessionStorage.removeItem("skillnex_token");
-    setUser(null); nav("/login");
-  }
-
-  if (checking) return <div className="loading-screen"><div className="brand-mark">S</div><span>Preparing your future...</span></div>;
-  return <Routes>
-    <Route path="/login" element={user ? <Navigate to="/" /> : <AuthPage mode="login" onSignedIn={signedIn} />} />
-    <Route path="/register" element={user ? <Navigate to="/" /> : <AuthPage mode="register" onSignedIn={signedIn} />} />
-    <Route path="/forgot-password" element={<AuthPage mode="forgot" onSignedIn={signedIn} />} />
-    <Route path="/reset-password" element={<AuthPage mode="reset" onSignedIn={signedIn} />} />
-    <Route path="/verify-email" element={<VerifyPage />} />
-    <Route path="/*" element={user ? <Shell user={user} onLogout={logout} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} /> : <Navigate to="/login" state={{ from: location }} />} />
-  </Routes>;
-}
-
-function AuthPage({ mode, onSignedIn }: { mode: "login"|"register"|"forgot"|"reset"; onSignedIn: (u:User,t:string,r:boolean)=>void }) {
-  const [form, setForm] = useState({ fullName:"", email:"", password:"", confirm:"", remember:true });
-  const [showPass, setShowPass] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-  const nav = useNavigate();
-  const resetToken = new URLSearchParams(window.location.search).get("token") || "";
-  const update = (key:string, value:string|boolean) => setForm(p => ({...p,[key]:value}));
-  const title = mode==="login" ? "Welcome back" : mode==="register" ? "Create your account" : mode==="forgot" ? "Forgot password?" : "Create new password";
-  const subtitle = mode==="login" ? "Your next opportunity starts here." : mode==="register" ? "Start building the career you deserve." : mode==="forgot" ? "We'll help you get back into your account." : "Choose a strong password for your account.";
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault(); setError(""); setMessage("");
-    if (mode==="register" && form.password !== form.confirm) return setError("Passwords do not match.");
-    if ((mode==="register" || mode==="reset") && form.password.length < 8) return setError("Password must contain at least 8 characters.");
-    setBusy(true);
-    try {
-      if (mode==="login") {
-        const d = await api("/auth/login",{method:"POST",body:JSON.stringify({email:form.email,password:form.password})});
-        onSignedIn(d.user,d.token,form.remember);
-      } else if (mode==="register") {
-        const d = await api("/auth/register",{method:"POST",body:JSON.stringify({fullName:form.fullName,email:form.email,password:form.password})});
-        setMessage(d.message);
-      } else if (mode==="forgot") {
-        const d = await api("/auth/forgot-password",{method:"POST",body:JSON.stringify({email:form.email})});
-        setMessage(d.message + (d.developmentResetLink ? ` Development link: ${d.developmentResetLink}` : ""));
-      } else {
-        const d = await api("/auth/reset-password",{method:"POST",body:JSON.stringify({token:resetToken,password:form.password})});
-        setMessage(d.message);
-      }
-    } catch(err) { setError(err instanceof Error ? err.message : "Unable to continue."); }
-    finally { setBusy(false); }
-  }
-
-  return <div className="auth-page">
-    <section className="auth-visual">
-      <div className="auth-brand"><div className="brand-mark">S</div><span>SKILLNEX</span></div>
-      <div className="visual-copy">
-        <span className="eyebrow"><Sparkles size={15}/> YOUR CAREER, OUR MISSION</span>
-        <h1>Discover your potential.<br/><em>Shape your future.</em></h1>
-        <p>One intelligent platform to build your skills, discover opportunities and grow with confidence.</p>
-        <div className="visual-stats"><div><strong>01</strong><span>Discover</span></div><div><strong>02</strong><span>Develop</span></div><div><strong>03</strong><span>Achieve</span></div></div>
-      </div>
-      <div className="visual-orbit orbit-one"></div><div className="visual-orbit orbit-two"></div>
-      <div className="visual-foot">AI-POWERED CAREER DEVELOPMENT PLATFORM</div>
-    </section>
-    <section className="auth-form-side">
-      <div className="auth-top"><span>Already have a plan?</span><button className="text-button" onClick={()=>nav(mode==="login"?"/register":"/login")}>{mode==="login"?"Create account":"Sign in"} <ArrowRight size={15}/></button></div>
-      <div className="auth-card">
-        <div className="mobile-brand"><div className="brand-mark">S</div><b>SKILLNEX</b></div>
-        <div className="form-icon"><ShieldCheck size={22}/></div>
-        <h2>{title}</h2><p className="muted">{subtitle}</p>
-        <form onSubmit={submit}>
-          {mode==="register" && <label>Full name<div className="field"><UserRound size={17}/><input required value={form.fullName} onChange={e=>update("fullName",e.target.value)} placeholder="Enter your full name"/></div></label>}
-          {(mode==="login"||mode==="register"||mode==="forgot") && <label>Email address<div className="field"><MessageCircle size={17}/><input required type="email" value={form.email} onChange={e=>update("email",e.target.value)} placeholder="you@example.com"/></div></label>}
-          {(mode==="login"||mode==="register"||mode==="reset") && <label>Password<div className="field"><LockKeyhole size={17}/><input required minLength={8} type={showPass?"text":"password"} value={form.password} onChange={e=>update("password",e.target.value)} placeholder="At least 8 characters"/><button type="button" className="field-action" onClick={()=>setShowPass(!showPass)}>{showPass?<EyeOff size={17}/>:<Eye size={17}/>}</button></div></label>}
-          {mode==="register" && <label>Confirm password<div className="field"><LockKeyhole size={17}/><input required type="password" value={form.confirm} onChange={e=>update("confirm",e.target.value)} placeholder="Re-enter your password"/></div></label>}
-          {mode==="login" && <div className="form-options"><label className="check-label"><input type="checkbox" checked={form.remember} onChange={e=>update("remember",e.target.checked)}/> Remember me</label><button type="button" className="text-button" onClick={()=>nav("/forgot-password")}>Forgot password?</button></div>}
-          {error && <div className="alert error">{error}</div>}{message && <div className="alert success">{message}</div>}
-          <button className="primary-button full-button" disabled={busy}>{busy?"Please wait...":mode==="login"?"Sign in to SKILLNEX":mode==="register"?"Create account":mode==="forgot"?"Send reset instructions":"Update password"} <ArrowRight size={17}/></button>
-        </form>
-        <div className="auth-divider"><span>YOUR NEXT CHAPTER STARTS HERE</span></div>
-        <p className="auth-switch">{mode==="login"?"New to SKILLNEX?":mode==="register"?"Already a member?": "Remembered your password?"} <button className="text-button" onClick={()=>nav(mode==="login"||mode==="register"? (mode==="login"?"/register":"/login"):"/login")}>{mode==="login"?"Create an account":mode==="register"?"Sign in":"Back to login"}</button></p>
-        <div className="secure-note"><LockKeyhole size={13}/> Your information is protected and secure.</div>
-      </div>
-    </section>
-  </div>;
-}
-
-function VerifyPage() {
-  const [msg,setMsg]=useState("Verifying your email...");
-  useEffect(()=>{ const token=new URLSearchParams(window.location.search).get("token"); if(token) api("/auth/verify-email",{method:"POST",body:JSON.stringify({token})}).then(d=>setMsg(d.message)).catch(e=>setMsg(e.message)); else setMsg("Verification token is missing."); },[]);
-  return <div className="verify-page"><div className="auth-card"><div className="form-icon"><CheckCircle2/></div><h2>Email verification</h2><p>{msg}</p><a className="primary-button" href="/login">Go to sign in <ArrowRight size={16}/></a></div></div>;
-}
-
-const navItems = [
-  {label:"Dashboard",icon:LayoutDashboard,path:"/"},
-  {label:"Jobs & Internships",icon:BriefcaseBusiness,path:"/jobs"},
-  {label:"Learning Center",icon:GraduationCap,path:"/learning"},
-  {label:"AI Career Tools",icon:Sparkles,path:"/ai"},
-  {label:"Portfolio",icon:FileText,path:"/portfolio"},
-  {label:"Community",icon:Users,path:"/community"},
-  {label:"Mentor Connect",icon:MessageCircle,path:"/mentors"},
-  {label:"Analytics",icon:ChartNoAxesCombined,path:"/analytics"}
+type ModuleItem = { id:string; title:string; description:string; status:string; date:string; [key:string]:string };
+type Field = { key:string; label:string; placeholder?:string; type?:"text"|"textarea"|"select"|"date"; options?:string[] };
+type ModuleDef = { path:string; title:string; group:string; description:string; icon:any; fields:Field[]; action:string; ai?:boolean };
+const modules:ModuleDef[] = [
+ {path:"/career-dna",title:"AI Career DNA & Guidance",group:"CAREER DEVELOPMENT",description:"Record your interests, qualifications and experience to organize a personal career direction.",icon:BrainCircuit,action:"Add assessment",ai:true,fields:[{key:"title",label:"Assessment title",placeholder:"e.g. Career interests assessment"},{key:"description",label:"Interests and strengths",type:"textarea"},{key:"status",label:"Assessment status",type:"select",options:["Not started","In progress","Completed"]}]},
+ {path:"/jobs",title:"Jobs & Internships",group:"OPPORTUNITIES",description:"Keep track of job and internship opportunities and your application progress.",icon:BriefcaseBusiness,action:"Add opportunity",fields:[{key:"title",label:"Job title",placeholder:"Software Engineer Intern"},{key:"description",label:"Company and location",placeholder:"Company · Colombo"},{key:"status",label:"Application status",type:"select",options:["Saved","Applied","Interview","Shortlisted","Rejected","Offer"]},{key:"date",label:"Closing date",type:"date"}]},
+ {path:"/job-match",title:"AI Job Compatibility",group:"CAREER DEVELOPMENT",description:"Record job-match reviews and compare your skills against role requirements. AI scoring requires a configured AI service.",icon:Target,action:"Add job review",ai:true,fields:[{key:"title",label:"Job role",placeholder:"Frontend Developer"},{key:"description",label:"Required skills / notes",type:"textarea"},{key:"status",label:"Review status",type:"select",options:["To review","Reviewed","Skills to improve"]}]},
+ {path:"/cv-studio",title:"AI CV & Resume Studio",group:"CAREER DEVELOPMENT",description:"Organize CV versions, cover letters and review notes. File parsing and AI analysis require service integration.",icon:FileText,action:"Add CV record",ai:true,fields:[{key:"title",label:"CV / document name",placeholder:"Software Engineer CV"},{key:"description",label:"Summary / review notes",type:"textarea"},{key:"status",label:"Document status",type:"select",options:["Draft","Ready","Needs review"]}]},
+ {path:"/skill-gap",title:"AI Skill Gap Analyzer",group:"CAREER DEVELOPMENT",description:"Track current skills, target skills and areas you plan to improve.",icon:ChartNoAxesCombined,action:"Add skill",ai:true,fields:[{key:"title",label:"Skill",placeholder:"TypeScript"},{key:"description",label:"Current level and target",placeholder:"Beginner → Intermediate"},{key:"status",label:"Progress",type:"select",options:["Not started","Learning","Practicing","Achieved"]}]},
+ {path:"/roadmap",title:"AI Career Roadmap",group:"CAREER DEVELOPMENT",description:"Plan career milestones, monthly goals, projects and certifications.",icon:Target,action:"Add milestone",fields:[{key:"title",label:"Milestone",placeholder:"Complete a React project"},{key:"description",label:"Goal / next action",type:"textarea"},{key:"status",label:"Progress",type:"select",options:["Planned","In progress","Completed"]},{key:"date",label:"Target date",type:"date"}]},
+ {path:"/interviews",title:"AI Mock Interview Lab",group:"CAREER DEVELOPMENT",description:"Plan technical, HR and behavioral interview practice sessions and record feedback.",icon:MessageCircle,action:"Add practice session",ai:true,fields:[{key:"title",label:"Interview topic",placeholder:"JavaScript technical interview"},{key:"description",label:"Questions / feedback notes",type:"textarea"},{key:"status",label:"Session status",type:"select",options:["Planned","Practiced","Reviewed"]},{key:"date",label:"Practice date",type:"date"}]},
+ {path:"/learning",title:"Learning & Development Center",group:"LEARNING",description:"Save learning resources, courses and challenges and track your progress.",icon:GraduationCap,action:"Add learning resource",fields:[{key:"title",label:"Course / resource",placeholder:"React fundamentals"},{key:"description",label:"Provider or resource link",placeholder:"Provider · URL"},{key:"status",label:"Learning status",type:"select",options:["Bookmarked","In progress","Completed"]}]},
+ {path:"/portfolio",title:"Professional Portfolio Builder",group:"PROFESSIONAL PROFILE",description:"Manage portfolio projects, achievements and the content you want to showcase.",icon:Award,action:"Add portfolio item",fields:[{key:"title",label:"Project / achievement",placeholder:"Inventory management application"},{key:"description",label:"Description and technologies",type:"textarea"},{key:"status",label:"Visibility",type:"select",options:["Draft","Published"]}]},
+ {path:"/skill-passport",title:"Digital Skill Passport",group:"PROFESSIONAL PROFILE",description:"Maintain a shareable record of skills, qualifications, projects and credentials.",icon:ShieldCheck,action:"Add credential",fields:[{key:"title",label:"Skill / qualification",placeholder:"Diploma in IT"},{key:"description",label:"Issuer or evidence reference",placeholder:"Issuing organization"},{key:"status",label:"Verification",type:"select",options:["Unverified","Pending verification","Verified"]}]},
+ {path:"/insights",title:"Career Market Insights",group:"INSIGHTS",description:"Collect career-market observations, in-demand skills and salary research notes.",icon:BarChart3,action:"Add market insight",fields:[{key:"title",label:"Career / market topic",placeholder:"QA Engineer demand"},{key:"description",label:"Research notes / source",type:"textarea"},{key:"status",label:"Category",type:"select",options:["Skills demand","Employment trend","Salary research","Regional insight"]}]},
+ {path:"/communication",title:"Professional Communication Studio",group:"PROFESSIONAL PROFILE",description:"Draft and organize professional emails, cover letters and application follow-ups.",icon:Mail,action:"Create draft",fields:[{key:"title",label:"Draft title",placeholder:"Job application follow-up"},{key:"description",label:"Message content",type:"textarea"},{key:"status",label:"Draft type",type:"select",options:["Professional email","Cover letter","LinkedIn content","Follow-up message"]}]},
+ {path:"/mentors",title:"Mentor Connect & Community",group:"NETWORKING",description:"Keep mentor contacts, networking notes and planned mentorship sessions.",icon:Network,action:"Add mentor / contact",fields:[{key:"title",label:"Mentor / contact name",placeholder:"Full name"},{key:"description",label:"Expertise and contact notes",type:"textarea"},{key:"status",label:"Connection status",type:"select",options:["To contact","Requested","Connected","Session planned"]}]},
+ {path:"/employer",title:"Employer & Recruitment",group:"RECRUITMENT",description:"Manage company recruitment notes, vacancies and candidate pipeline records.",icon:Building2,action:"Add recruitment record",fields:[{key:"title",label:"Company / vacancy",placeholder:"Company · Software Engineer"},{key:"description",label:"Candidate / recruitment notes",type:"textarea"},{key:"status",label:"Recruitment status",type:"select",options:["Draft","Published","Reviewing applicants","Shortlisted","Interviewing","Closed"]}]},
+ {path:"/analytics",title:"Career Analytics",group:"INSIGHTS",description:"Review your saved development records and monitor activity across your workspace.",icon:Activity,action:"Add progress note",fields:[{key:"title",label:"Progress milestone",placeholder:"Completed portfolio project"},{key:"description",label:"Outcome / reflection",type:"textarea"},{key:"status",label:"Progress",type:"select",options:["Planned","In progress","Completed"]}]},
+ {path:"/community",title:"Professional Community",group:"NETWORKING",description:"Organize discussion topics, knowledge-sharing ideas and community contributions.",icon:Users,action:"Create post",fields:[{key:"title",label:"Discussion title",placeholder:"How to prepare for a QA interview?"},{key:"description",label:"Post content",type:"textarea"},{key:"status",label:"Post status",type:"select",options:["Draft","Published"]}]}
 ];
 
-function Shell({user,onLogout,mobileOpen,setMobileOpen}:{user:User;onLogout:()=>void;mobileOpen:boolean;setMobileOpen:(v:boolean)=>void}) {
-  const nav=useNavigate(); const loc=useLocation();
-  const [search,setSearch]=useState(""); const [users,setUsers]=useState<User[]>([]);
-  const [stats,setStats]=useState<any>({});
-  const [showProfile,setShowProfile]=useState(false);
-  const isAdmin=user.role==="ADMIN";
-  useEffect(()=>{api("/dashboard/summary").then(d=>setStats(d.stats||{})).catch(()=>{}); if(isAdmin) api("/users").then(d=>setUsers(d.users)).catch(()=>{});},[isAdmin]);
-  const active = navItems.find(n=>n.path===loc.pathname)?.label || (loc.pathname==="/users"?"User Management":"Dashboard");
-  return <div className="app-shell">
-    <aside className={`sidebar ${mobileOpen?"sidebar-open":""}`}>
-      <div className="side-brand"><div className="brand-mark small">S</div><span>SKILLNEX</span><button className="close-nav" onClick={()=>setMobileOpen(false)}><X/></button></div>
-      <div className="side-label">WORKSPACE</div>
-      <nav>{navItems.map(item=><button key={item.path} className={`nav-link ${loc.pathname===item.path?"active":""}`} onClick={()=>{nav(item.path);setMobileOpen(false)}}><item.icon size={18}/><span>{item.label}</span>{item.label==="AI Career Tools"&&<i>NEW</i>}</button>)}</nav>
-      {isAdmin&&<><div className="side-label admin-label">ADMINISTRATION</div><button className={`nav-link ${loc.pathname==="/users"?"active":""}`} onClick={()=>{nav("/users");setMobileOpen(false)}}><ShieldCheck size={18}/><span>User Management</span></button></>}
-      <div className="side-spacer"/>
-      <div className="premium-card"><div className="premium-icon"><Sparkles/></div><b>Grow without limits</b><p>Your next opportunity is closer than you think.</p><button onClick={()=>nav("/ai")}>Explore AI tools <ArrowRight size={14}/></button></div>
-      <button className="nav-link side-settings" onClick={()=>nav("/settings")}><Settings size={18}/><span>Settings</span></button>
-      <div className="side-user"><div className="avatar">{user.fullName.slice(0,1).toUpperCase()}</div><div className="user-mini"><b>{user.fullName}</b><span>{roleLabel[user.role]||user.role}</span></div><button title="Sign out" onClick={onLogout}><LogOut size={17}/></button></div>
-    </aside>
-    {mobileOpen&&<div className="scrim" onClick={()=>setMobileOpen(false)}/>}
-    <main className="main-area">
-      <header className="topbar"><button className="menu-button" onClick={()=>setMobileOpen(true)}><Menu/></button><div className="crumb"><span>Workspace</span><b>/</b>{active}</div><div className="top-actions"><div className="top-search"><Search size={17}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search anything..."/></div><button className="icon-button notification"><Bell size={19}/><i/></button><button className="profile-trigger" onClick={()=>setShowProfile(!showProfile)}><div className="avatar">{user.fullName.slice(0,1).toUpperCase()}</div><span><b>{user.fullName}</b><small>{roleLabel[user.role]||user.role}</small></span><ChevronDown size={15}/></button>{showProfile&&<div className="profile-menu"><button onClick={()=>nav("/settings")}>My profile & settings</button><button onClick={onLogout}>Sign out</button></div>}</div></header>
-      <Routes>
-        <Route path="/" element={<Dashboard user={user} stats={stats}/>} />
-        <Route path="/users" element={isAdmin?<UserManagement users={users} setUsers={setUsers}/>:<Navigate to="/"/>}/>
-        <Route path="/jobs" element={<Placeholder title="Jobs & Internships" desc="Discover opportunities that match your skills and ambitions." icon={<BriefcaseBusiness/>}/>} />
-        <Route path="/learning" element={<Placeholder title="Learning Center" desc="Build in-demand skills through guided learning paths." icon={<BookOpen/>}/>} />
-        <Route path="/ai" element={<Placeholder title="AI Career Assistant" desc="Get career guidance, skill insights and personalized next steps." icon={<Sparkles/>}/>} />
-        <Route path="/portfolio" element={<Placeholder title="Professional Portfolio" desc="Showcase your projects, experience and achievements." icon={<FileText/>}/>} />
-        <Route path="/community" element={<Placeholder title="Professional Community" desc="Connect, share knowledge and grow with your community." icon={<Users/>}/>} />
-        <Route path="/mentors" element={<Placeholder title="Mentor Connect" desc="Find experienced professionals to guide your journey." icon={<MessageCircle/>}/>} />
-        <Route path="/analytics" element={<Placeholder title="Career Analytics" desc="Track your progress and understand your career growth." icon={<Activity/>}/>} />
-        <Route path="/settings" element={<Placeholder title="Settings & Profile" desc="Manage your account details and preferences." icon={<Settings/>}/>} />
-      </Routes>
-    </main>
-  </div>;
+function App() {
+ const [user,setUser]=useState<User|null>(null); const [checking,setChecking]=useState(true); const [mobileOpen,setMobileOpen]=useState(false);
+ const nav=useNavigate(); const location=useLocation();
+ useEffect(()=>{if(!getToken()){setChecking(false);return;} api("/auth/me").then(d=>setUser(d.user)).catch(()=>{localStorage.removeItem("skillnex_token");sessionStorage.removeItem("skillnex_token");}).finally(()=>setChecking(false));},[]);
+ function signedIn(u:User,token:string,remember:boolean){if(remember)localStorage.setItem("skillnex_token",token);else sessionStorage.setItem("skillnex_token",token);setUser(u);nav("/");}
+ function logout(){localStorage.removeItem("skillnex_token");sessionStorage.removeItem("skillnex_token");setUser(null);nav("/login");}
+ if(checking)return <div className="loading-screen"><div className="brand-mark">S</div><span>Preparing your future...</span></div>;
+ return <Routes>
+  <Route path="/login" element={user?<Navigate to="/"/>:<AuthPage mode="login" onSignedIn={signedIn}/>} />
+  <Route path="/register" element={user?<Navigate to="/"/>:<AuthPage mode="register" onSignedIn={signedIn}/>} />
+  <Route path="/forgot-password" element={<AuthPage mode="forgot" onSignedIn={signedIn}/>} />
+  <Route path="/reset-password" element={<AuthPage mode="reset" onSignedIn={signedIn}/>} />
+  <Route path="/verify-email" element={<VerifyPage/>}/>
+  <Route path="/*" element={user?<Shell user={user} onLogout={logout} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen}/>:<Navigate to="/login" state={{from:location}}/>}/>
+ </Routes>;
+}
+function AuthPage({mode,onSignedIn}:{mode:"login"|"register"|"forgot"|"reset";onSignedIn:(u:User,t:string,r:boolean)=>void}){
+ const [form,setForm]=useState({fullName:"",email:"",password:"",confirm:"",remember:true});const [showPass,setShowPass]=useState(false);const [busy,setBusy]=useState(false);const [message,setMessage]=useState("");const [error,setError]=useState("");const nav=useNavigate();const resetToken=new URLSearchParams(window.location.search).get("token")||"";
+ const update=(key:string,value:string|boolean)=>setForm(p=>({...p,[key]:value}));
+ const title=mode==="login"?"Welcome back":mode==="register"?"Create your account":mode==="forgot"?"Forgot password?":"Create new password";
+ const subtitle=mode==="login"?"Sign in to continue your career journey.":mode==="register"?"Create an account and start building your future.":mode==="forgot"?"We'll help you regain access to your account.":"Choose a strong password for your account.";
+ async function submit(e:React.FormEvent){e.preventDefault();setError("");setMessage("");if(mode==="register"&&form.password!==form.confirm)return setError("Passwords do not match.");if((mode==="register"||mode==="reset")&&form.password.length<8)return setError("Password must contain at least 8 characters.");setBusy(true);try{
+  if(mode==="login"){const d=await api("/auth/login",{method:"POST",body:JSON.stringify({email:form.email,password:form.password})});onSignedIn(d.user,d.token,form.remember);}
+  else if(mode==="register"){const d=await api("/auth/register",{method:"POST",body:JSON.stringify({fullName:form.fullName,email:form.email,password:form.password})});setMessage(d.message);}
+  else if(mode==="forgot"){const d=await api("/auth/forgot-password",{method:"POST",body:JSON.stringify({email:form.email})});setMessage(d.message+(d.developmentResetLink?` Development link: ${d.developmentResetLink}`:""));}
+  else{const d=await api("/auth/reset-password",{method:"POST",body:JSON.stringify({token:resetToken,password:form.password})});setMessage(d.message);}
+ }catch(err){setError(err instanceof Error?err.message:"Unable to continue.");}finally{setBusy(false);}}
+ return <div className="auth-page"><div className="auth-card"><div className="auth-brand"><div className="brand-mark">S</div><span>SKILLNEX</span></div><span className="eyebrow">CAREER DEVELOPMENT PLATFORM</span><h1>{title}</h1><p className="muted">{subtitle}</p><form onSubmit={submit}>
+ {mode==="register"&&<label>Full name<div className="field"><UserRound/><input required value={form.fullName} onChange={e=>update("fullName",e.target.value)} placeholder="Enter your full name"/></div></label>}
+ {(mode==="login"||mode==="register"||mode==="forgot")&&<label>Email address<div className="field"><Mail/><input required type="email" value={form.email} onChange={e=>update("email",e.target.value)} placeholder="you@example.com"/></div></label>}
+ {(mode==="login"||mode==="register"||mode==="reset")&&<label>Password<div className="field"><LockKeyhole/><input required minLength={8} type={showPass?"text":"password"} value={form.password} onChange={e=>update("password",e.target.value)} placeholder="At least 8 characters"/><button type="button" className="field-action" onClick={()=>setShowPass(!showPass)}>{showPass?<EyeOff/>:<Eye/>}</button></div></label>}
+ {mode==="register"&&<label>Confirm password<div className="field"><LockKeyhole/><input required type="password" value={form.confirm} onChange={e=>update("confirm",e.target.value)} placeholder="Re-enter your password"/></div></label>}
+ {mode==="login"&&<div className="form-options"><label className="check-label"><input type="checkbox" checked={form.remember} onChange={e=>update("remember",e.target.checked)}/> Remember me</label><button type="button" className="text-button" onClick={()=>nav("/forgot-password")}>Forgot password?</button></div>}
+ {error&&<div className="alert error">{error}</div>}{message&&<div className="alert success">{message}</div>}
+ <button className="primary-button full-button" disabled={busy}>{busy?"Please wait...":mode==="login"?"Sign in":mode==="register"?"Create account":mode==="forgot"?"Send reset instructions":"Update password"}<ArrowRight size={17}/></button></form>
+ <p className="auth-switch">{mode==="login"?"New to SKILLNEX?":mode==="register"?"Already have an account?":"Remembered your password?"} <button className="text-button" onClick={()=>nav(mode==="login"?"/register":"/login")}>{mode==="login"?"Create an account":mode==="register"?"Sign in":"Back to login"}</button></p>
+ <div className="secure-note"><LockKeyhole size={13}/> Secure account access</div></div></div>;
+}
+function VerifyPage(){const[msg,setMsg]=useState("Verifying your email...");useEffect(()=>{const token=new URLSearchParams(window.location.search).get("token");if(token)api("/auth/verify-email",{method:"POST",body:JSON.stringify({token})}).then(d=>setMsg(d.message)).catch(e=>setMsg(e.message));else setMsg("Verification token is missing.");},[]);return <div className="verify-page"><div className="auth-card"><CheckCircle2/><h2>Email verification</h2><p>{msg}</p><a className="primary-button" href="/login">Go to sign in</a></div></div>;}
+
+const baseNav=[{label:"Dashboard",path:"/",icon:LayoutDashboard,group:"WORKSPACE"},{label:"Career DNA",path:"/career-dna",icon:BrainCircuit,group:"CAREER DEVELOPMENT"},{label:"Jobs & Internships",path:"/jobs",icon:BriefcaseBusiness,group:"OPPORTUNITIES"},{label:"Job Compatibility",path:"/job-match",icon:Target,group:"CAREER DEVELOPMENT"},{label:"CV & Resume Studio",path:"/cv-studio",icon:FileText,group:"CAREER DEVELOPMENT"},{label:"Skill Gap Analyzer",path:"/skill-gap",icon:ChartNoAxesCombined,group:"CAREER DEVELOPMENT"},{label:"Career Roadmap",path:"/roadmap",icon:Target,group:"CAREER DEVELOPMENT"},{label:"Mock Interview Lab",path:"/interviews",icon:MessageCircle,group:"CAREER DEVELOPMENT"},{label:"Learning Center",path:"/learning",icon:GraduationCap,group:"LEARNING"},{label:"Portfolio Builder",path:"/portfolio",icon:Award,group:"PROFESSIONAL PROFILE"},{label:"Digital Skill Passport",path:"/skill-passport",icon:ShieldCheck,group:"PROFESSIONAL PROFILE"},{label:"Market Insights",path:"/insights",icon:BarChart3,group:"INSIGHTS"},{label:"Communication Studio",path:"/communication",icon:Mail,group:"PROFESSIONAL PROFILE"},{label:"Mentor Connect",path:"/mentors",icon:Network,group:"NETWORKING"},{label:"Professional Community",path:"/community",icon:Users,group:"NETWORKING"},{label:"Career Analytics",path:"/analytics",icon:Activity,group:"INSIGHTS"}];
+function Shell({user,onLogout,mobileOpen,setMobileOpen}:{user:User;onLogout:()=>void;mobileOpen:boolean;setMobileOpen:(v:boolean)=>void}){
+ const nav=useNavigate(),loc=useLocation();const[search,setSearch]=useState("");const[users,setUsers]=useState<User[]>([]);const[stats,setStats]=useState<any>({});const[showProfile,setShowProfile]=useState(false);const isAdmin=user.role==="ADMIN";
+ useEffect(()=>{api("/dashboard/summary").then(d=>setStats(d.stats||{})).catch(()=>{});if(isAdmin)api("/users").then(d=>setUsers(d.users)).catch(()=>{});},[isAdmin]);
+ const active=baseNav.find(n=>n.path===loc.pathname)?.label||modules.find(m=>m.path===loc.pathname)?.title||(loc.pathname==="/users"?"User Management":loc.pathname==="/settings"?"Settings":loc.pathname==="/permissions"?"Roles & Permissions":"Dashboard");
+ const grouped=[...new Set(baseNav.map(n=>n.group))];
+ return <div className="app-shell"><aside className={`sidebar ${mobileOpen?"sidebar-open":""}`}><div className="side-brand"><div className="brand-mark small">S</div><span>SKILLNEX</span><button className="close-nav" onClick={()=>setMobileOpen(false)}><X/></button></div>
+ {grouped.map(g=><section className="nav-group" key={g}><div className="side-label">{g}</div>{baseNav.filter(n=>n.group===g).map(n=><button key={n.path} className={`nav-link ${loc.pathname===n.path?"active":""}`} onClick={()=>{nav(n.path);setMobileOpen(false)}}><n.icon size={17}/><span>{n.label}</span></button>)}</section>)}
+ {isAdmin&&<section className="nav-group"><div className="side-label">ADMINISTRATION</div><button className={`nav-link ${loc.pathname==="/users"?"active":""}`} onClick={()=>nav("/users")}><ShieldCheck size={17}/><span>User Management</span></button><button className={`nav-link ${loc.pathname==="/permissions"?"active":""}`} onClick={()=>nav("/permissions")}><SlidersHorizontal size={17}/><span>Roles & Permissions</span></button></section>}
+ <div className="side-spacer"/><button className={`nav-link side-settings ${loc.pathname==="/settings"?"active":""}`} onClick={()=>nav("/settings")}><Settings size={18}/><span>Settings</span></button><div className="side-user"><div className="avatar">{user.fullName.slice(0,1).toUpperCase()}</div><div className="user-mini"><b>{user.fullName}</b><span>{roleLabel[user.role]||user.role}</span></div><button title="Sign out" onClick={onLogout}><LogOut size={17}/></button></div><button className="signout-button" onClick={onLogout}><LogOut size={17}/> Sign Out</button></aside>
+ {mobileOpen&&<div className="scrim" onClick={()=>setMobileOpen(false)}/>}<main className="main-area"><header className="topbar"><button className="menu-button" onClick={()=>setMobileOpen(true)}><Menu/></button><div className="crumb">Workspace <b>/</b> {active}</div><div className="top-actions"><div className="top-search"><Search size={16}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search workspace..."/></div><button className="icon-button" title="Notifications"><Bell size={18}/></button><button className="profile-trigger" onClick={()=>setShowProfile(!showProfile)}><div className="avatar">{user.fullName.slice(0,1).toUpperCase()}</div><span><b>{user.fullName}</b><small>{roleLabel[user.role]||user.role}</small></span><ChevronDown size={14}/></button>{showProfile&&<div className="profile-menu"><button onClick={()=>nav("/settings")}>Profile & settings</button><button onClick={onLogout}>Sign out</button></div>}</div></header>
+ <Routes><Route path="/" element={<Dashboard user={user} stats={stats} onNavigate={nav}/>} /><Route path="/users" element={isAdmin?<UserManagement users={users} setUsers={setUsers}/>:<Navigate to="/"/>}/><Route path="/permissions" element={isAdmin?<PermissionsPage/>:<Navigate to="/"/>}/><Route path="/settings" element={<SettingsPage user={user}/>} />{modules.map(m=><Route key={m.path} path={m.path} element={<ModulePage key={m.path} def={m}/>} />)}<Route path="*" element={<Navigate to="/"/>}/></Routes></main></div>;
+}
+function Dashboard({user,stats,onNavigate}:{user:User;stats:any;onNavigate:(p:string)=>void}){
+ const[recent,setRecent]=useState<ModuleItem[]>([]);useEffect(()=>{const all=modules.flatMap(m=>{try{return JSON.parse(localStorage.getItem("skillnex_"+m.path)||"[]") as ModuleItem[]}catch{return []}});setRecent(all.sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5));},[]);
+ return <div className="page-content"><div className="page-heading"><div><span className="eyebrow">YOUR CAREER JOURNEY</span><h1>Welcome back, {user.fullName.split(" ")[0]}</h1><p>Discover your potential. Build your skills. Shape your future.</p></div><span className="role-pill">{roleLabel[user.role]||user.role}</span></div>
+ <div className="welcome-banner"><div><span className="eyebrow">CAREER DEVELOPMENT WORKSPACE</span><h2>Your next opportunity starts with one step.</h2><p>Use your career tools to organize goals, skills, learning and opportunities in one place.</p><button className="primary-button" onClick={()=>onNavigate("/career-dna")}>Start career assessment <ArrowRight size={16}/></button></div><div className="banner-symbol"><Target size={76}/></div></div>
+ <div className="stat-grid"><Stat icon={<Users/>} value={String(stats.totalUsers??"—")} label={user.role==="ADMIN"?"Platform users":"Platform users"}/><Stat icon={<BriefcaseBusiness/>} value={String(recent.length)} label="Recent records"/><Stat icon={<GraduationCap/>} value={String(recent.filter(x=>x.status==="Completed"||x.status==="Achieved").length)} label="Completed goals"/><Stat icon={<CalendarDays/>} value={String(recent.filter(x=>x.status==="In progress").length)} label="In progress"/></div>
+ <div className="section-heading"><div><span className="eyebrow">ALL-IN-ONE PLATFORM</span><h2>Explore your workspace</h2></div></div><div className="module-grid">{modules.map(m=><button className="module-card" key={m.path} onClick={()=>onNavigate(m.path)}><span className="module-icon"><m.icon size={21}/></span><b>{m.title}</b><p>{m.description}</p><span className="module-open">Open module <ArrowRight size={14}/></span></button>)}</div>
+ {user.role==="ADMIN"&&<div className="admin-overview panel"><div className="panel-head"><div><span className="eyebrow">PLATFORM ADMINISTRATION</span><h3>Community overview</h3></div><button className="secondary-button" onClick={()=>onNavigate("/users")}>Manage users <ArrowRight size={14}/></button></div><div className="admin-stats"><div><b>{stats.totalUsers??0}</b><span>Total users</span></div><div><b>{stats.activeUsers??0}</b><span>Active accounts</span></div><div><b>{stats.students??0}</b><span>Students</span></div><div><b>{stats.employers??0}</b><span>Employers</span></div></div></div>}
+ </div>;
+}
+function Stat({icon,value,label}:{icon:any;value:string;label:string}){return <div className="stat-card"><div className="stat-icon">{icon}</div><div><b>{value}</b><span>{label}</span></div></div>;}
+
+function ModulePage({def}:{def:ModuleDef}){
+ const storageKey="skillnex_"+def.path;const[items,setItems]=useState<ModuleItem[]>(()=>{try{return JSON.parse(localStorage.getItem(storageKey)||"[]")}catch{return []}});const[query,setQuery]=useState("");const[modal,setModal]=useState(false);const[editing,setEditing]=useState<ModuleItem|null>(null);const[form,setForm]=useState<Record<string,string>>({});const[notice,setNotice]=useState("");
+ useEffect(()=>{localStorage.setItem(storageKey,JSON.stringify(items));},[items,storageKey]);
+ const filtered=useMemo(()=>items.filter(i=>Object.values(i).join(" ").toLowerCase().includes(query.toLowerCase())),[items,query]);
+ function open(item?:ModuleItem){setEditing(item||null);const values:Record<string,string>={};def.fields.forEach(f=>values[f.key]=item?.[f.key]|| (f.key==="status"?(f.options?.[0]||"Planned"):""));setForm(values);setNotice("");setModal(true);}
+ function save(e:React.FormEvent){e.preventDefault();if(!form.title?.trim())return;const item={...form,id:editing?.id||`${Date.now()}-${Math.random().toString(36).slice(2,8)}`,title:form.title.trim(),description:form.description||"",status:form.status||"Planned",date:form.date||new Date().toISOString().slice(0,10)} as ModuleItem;setItems(old=>editing?old.map(x=>x.id===editing.id?item:x):[item,...old]);setModal(false);setNotice("Record saved successfully.");}
+ function remove(item:ModuleItem){if(confirm(`Delete "${item.title}"?`))setItems(old=>old.filter(x=>x.id!==item.id));}
+ const Icon=def.icon;
+ return <div className="page-content"><div className="page-heading"><div><span className="eyebrow">{def.group}</span><h1>{def.title}</h1><p>{def.description}</p></div><button className="primary-button" onClick={()=>open()}><Plus size={17}/>{def.action}</button></div>
+ {def.ai&&<div className="notice-panel"><Sparkles size={19}/><div><b>AI service connection required</b><p>This workspace lets you organize inputs and results. Live AI analysis, scoring or generation will be enabled when the Python/FastAPI AI service and provider credentials are configured.</p></div></div>}
+ {notice&&<div className="alert success">{notice}</div>}
+ <div className="module-summary"><div><b>{items.length}</b><span>Total records</span></div><div><b>{items.filter(x=>/complete|achieved|published|verified|offer/i.test(x.status)).length}</b><span>Completed / active</span></div><div><b>{items.filter(x=>/progress|review|interview|learning/i.test(x.status)).length}</b><span>In progress</span></div></div>
+ <section className="panel table-panel"><div className="table-toolbar"><div><h3>{def.title} records</h3><span>{filtered.length} records found</span></div><div className="table-search"><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search records..."/></div></div>
+ {filtered.length?<div className="record-list">{filtered.map(item=><article className="record-row" key={item.id}><div className="record-symbol"><Icon size={20}/></div><div className="record-main"><b>{item.title}</b><p>{item.description||"No additional details"}</p><small>{item.date||"No date"}</small></div><span className="account-status">{item.status}</span><div className="row-actions"><button title="Edit" onClick={()=>open(item)}><Pencil size={16}/></button><button title="Delete" onClick={()=>remove(item)}><Trash2 size={16}/></button></div></article>)}</div>:<div className="empty-state"><Icon size={32}/><b>No records yet</b><p>Add your first record to start using this module.</p><button className="secondary-button" onClick={()=>open()}><Plus size={15}/> {def.action}</button></div>}
+ </section>
+ {modal&&<div className="modal-backdrop" onClick={()=>setModal(false)}><div className="user-modal" onClick={e=>e.stopPropagation()}><div className="modal-heading"><div><span className="eyebrow">{def.group}</span><h3>{editing?"Edit record":def.action}</h3></div><button onClick={()=>setModal(false)}><X/></button></div><form onSubmit={save}>{def.fields.map(f=><label key={f.key}>{f.label}{f.type==="textarea"?<textarea required={f.key==="title"} value={form[f.key]||""} onChange={e=>setForm({...form,[f.key]:e.target.value})} placeholder={f.placeholder||""}/>:f.type==="select"?<select value={form[f.key]||""} onChange={e=>setForm({...form,[f.key]:e.target.value})}>{f.options?.map(o=><option key={o}>{o}</option>)}</select>:<input required={f.key==="title"} type={f.type==="date"?"date":"text"} value={form[f.key]||""} onChange={e=>setForm({...form,[f.key]:e.target.value})} placeholder={f.placeholder||""}/>}</label>)}<button className="primary-button full-button"><Save size={16}/> Save record</button></form></div></div>}
+ </div>;
 }
 
-function Dashboard({user,stats}:{user:User;stats:any}) {
-  return <div className="page-content">
-    <div className="welcome-banner"><div><span className="eyebrow light"><Sparkles size={14}/> YOUR CAREER JOURNEY</span><h1>Welcome back, {user.fullName.split(" ")[0]}!</h1><p>Keep moving forward. Every small step brings you closer to your dream career.</p><button className="banner-button">View your roadmap <ArrowRight size={16}/></button></div><div className="readiness"><div className="ring"><strong>78%</strong></div><span>Career readiness</span></div></div>
-    <div className="stat-grid"><Stat icon={<BriefcaseBusiness/>} value="05" label="Applied jobs" tone="blue"/><Stat icon={<GraduationCap/>} value="12" label="Completed courses" tone="gold"/><Stat icon={<Target/>} value="85%" label="Skill match" tone="green"/><Stat icon={<CalendarDays/>} value="02" label="Upcoming interviews" tone="violet"/></div>
-    <div className="content-grid">
-      <section className="panel roadmap-panel"><div className="panel-head"><div><span className="eyebrow">YOUR DEVELOPMENT</span><h3>Your career roadmap</h3></div><button className="link-button">View full plan <ArrowRight size={14}/></button></div><div className="roadmap-list"><RoadmapItem done title="Learn JavaScript basics" month="MONTH 01"/><RoadmapItem done title="Master React framework" month="MONTH 02"/><RoadmapItem title="Build real-world projects" month="MONTH 03"/><RoadmapItem title="Enhance your portfolio" month="MONTH 04"/></div><div className="goal-card"><div className="goal-icon"><Target/></div><span>NEXT MILESTONE</span><b>Build your first React project</b><div className="progress"><i style={{width:"68%"}}/></div><small>68% completed</small></div></section>
-      <section className="panel jobs-panel"><div className="panel-head"><div><span className="eyebrow">MADE FOR YOUR PROFILE</span><h3>Recommended opportunities</h3></div><button className="link-button">View all <ArrowRight size={14}/></button></div><JobRow title="Software Engineer" company="TechWave Solutions" tag="Remote"/><JobRow title="QA Engineer Intern" company="Dialog Axiata PLC" tag="Internship"/><JobRow title="Full Stack Developer" company="IFS R&D" tag="Hybrid"/></section>
-    </div>
-    <div className="lower-grid">
-      <section className="panel assistant-panel"><div className="assistant-avatar"><Sparkles/></div><div><span className="eyebrow">YOUR PERSONAL AI GUIDE</span><h3>Meet your AI Career Assistant</h3><p>Get help with career choices, skill development and your next big move.</p><button className="primary-button">Start a conversation <ArrowRight size={15}/></button></div></section>
-      <section className="panel learning-panel"><div className="panel-head"><div><span className="eyebrow">KEEP LEARNING</span><h3>Continue your learning</h3></div><BookOpen size={21}/></div><div className="course-row"><div className="course-art"><GraduationCap/></div><div><b>React for Beginners</b><span>Build modern web applications</span><div className="progress"><i style={{width:"62%"}}/></div><small>62% completed</small></div></div></section>
-    </div>
-    {stats.totalUsers!==undefined&&user.role==="ADMIN"&&<div className="admin-overview panel"><div className="panel-head"><div><span className="eyebrow">PLATFORM OVERVIEW</span><h3>Community at a glance</h3></div><span className="status-pill"><i/> Live data</span></div><div className="admin-stats"><div><b>{stats.totalUsers}</b><span>Total users</span></div><div><b>{stats.activeUsers}</b><span>Active accounts</span></div><div><b>{stats.students}</b><span>Students</span></div><div><b>{stats.employers}</b><span>Employers</span></div></div></div>}
-  </div>;
+function UserManagement({users,setUsers}:{users:User[];setUsers:(u:User[])=>void}){
+ const[query,setQuery]=useState("");const[modal,setModal]=useState(false);const[editing,setEditing]=useState<User|null>(null);const[form,setForm]=useState({fullName:"",email:"",password:"",role:"STUDENT",status:"ACTIVE"});const[error,setError]=useState("");
+ const filtered=useMemo(()=>users.filter(u=>`${u.fullName} ${u.email} ${u.role}`.toLowerCase().includes(query.toLowerCase())),[users,query]);
+ function open(u?:User){setEditing(u||null);setForm({fullName:u?.fullName||"",email:u?.email||"",password:"",role:u?.role||"STUDENT",status:u?.status||"ACTIVE"});setError("");setModal(true);}
+ async function save(e:React.FormEvent){e.preventDefault();setError("");try{if(editing){const d=await api(`/users/${editing.id}`,{method:"PATCH",body:JSON.stringify({fullName:form.fullName,role:form.role,status:form.status})});setUsers(users.map(u=>u.id===editing.id?d.user:u));}else{const d=await api("/users",{method:"POST",body:JSON.stringify(form)});setUsers([d.user,...users]);}setModal(false);}catch(e){setError(e instanceof Error?e.message:"Unable to save user.");}}
+ async function deactivate(u:User){if(!confirm(`Deactivate ${u.fullName}'s account?`))return;try{await api(`/users/${u.id}`,{method:"DELETE"});setUsers(users.map(x=>x.id===u.id?{...x,status:"INACTIVE"}:x));}catch(e){alert(e instanceof Error?e.message:"Unable to deactivate user.");}}
+ return <div className="page-content"><div className="page-heading"><div><span className="eyebrow">ADMINISTRATION</span><h1>Manage Users</h1><p>Add users, assign platform roles and manage account status.</p></div><button className="primary-button" onClick={()=>open()}><Plus size={17}/> Add member</button></div>
+ <div className="module-summary"><div><b>{users.length}</b><span>Total accounts</span></div><div><b>{users.filter(u=>u.status==="ACTIVE").length}</b><span>Active users</span></div><div><b>{users.filter(u=>u.role==="EMPLOYER").length}</b><span>Employers</span></div><div><b>{users.filter(u=>u.role==="MENTOR").length}</b><span>Mentors</span></div></div>
+ <section className="panel table-panel"><div className="table-toolbar"><div><h3>All platform users</h3><span>{filtered.length} accounts found</span></div><div className="table-search"><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search by name, email or role"/></div></div><div className="table-scroll"><table><thead><tr><th>MEMBER</th><th>ROLE</th><th>STATUS</th><th>EMAIL</th><th>DATE CREATED</th><th>LAST LOGIN</th><th>ACTIONS</th></tr></thead><tbody>{filtered.map(u=><tr key={u.id}><td><div className="table-user"><div className="avatar">{u.fullName.slice(0,1)}</div><div><b>{u.fullName}</b><span>{u.email}</span></div></div></td><td><span className="role-pill">{roleLabel[u.role]||u.role}</span></td><td><span className={`account-status ${u.status==="ACTIVE"?"active-status":"inactive-status"}`}>{u.status||"ACTIVE"}</span></td><td>{u.emailVerified?"Verified":"Pending"}</td><td>{u.createdAt?new Date(u.createdAt).toLocaleDateString():"—"}</td><td>{u.lastLoginAt?new Date(u.lastLoginAt).toLocaleString():"—"}</td><td><div className="row-actions"><button title="Edit member" onClick={()=>open(u)}><Pencil size={16}/></button><button title="Deactivate member" onClick={()=>deactivate(u)}><UserX size={16}/></button></div></td></tr>)}</tbody></table>{!filtered.length&&<div className="empty-state">No users match your search.</div>}</div></section>
+ {modal&&<div className="modal-backdrop" onClick={()=>setModal(false)}><div className="user-modal" onClick={e=>e.stopPropagation()}><div className="modal-heading"><div><span className="eyebrow">ACCOUNT DETAILS</span><h3>{editing?"Edit member":"Add new member"}</h3></div><button onClick={()=>setModal(false)}><X/></button></div><form onSubmit={save}><label>Full name<input required value={form.fullName} onChange={e=>setForm({...form,fullName:e.target.value})}/></label><label>Email address<input required type="email" disabled={!!editing} value={editing?editing.email:form.email} onChange={e=>setForm({...form,email:e.target.value})}/></label>{!editing&&<label>Temporary password<input required minLength={8} type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/></label>}<label>Role<select value={form.role} onChange={e=>setForm({...form,role:e.target.value})}><option value="STUDENT">Student</option><option value="JOB_SEEKER">Job Seeker</option><option value="EMPLOYER">Employer</option><option value="MENTOR">Mentor</option><option value="ADMIN">Administrator</option></select></label>{editing&&<label>Status<select value={form.status} onChange={e=>setForm({...form,status:e.target.value})}><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option><option value="SUSPENDED">Suspended</option></select></label>}{error&&<div className="alert error">{error}</div>}<button className="primary-button full-button">Save member</button></form></div></div>}</div>;
 }
-function Stat({icon,value,label,tone}:{icon:any;value:string;label:string;tone:string}) { return <div className="stat-card"><div className={`stat-icon ${tone}`}>{icon}</div><div><b>{value}</b><span>{label}</span></div></div>; }
-function RoadmapItem({done=false,title,month}:{done?:boolean;title:string;month:string}) { return <div className={`roadmap-item ${done?"done":""}`}><div className="roadmap-check">{done?<CheckCircle2 size={17}/>:<span/>}</div><small>{month}</small><b>{title}</b></div>; }
-function JobRow({title,company,tag}:{title:string;company:string;tag:string}) { return <div className="job-row"><div className="company-icon"><BriefcaseBusiness/></div><div className="job-info"><b>{title}</b><span>{company} · Colombo</span></div><span className="job-tag">{tag}</span><button className="apply-button">View</button></div>; }
-
-function UserManagement({users,setUsers}:{users:User[];setUsers:(u:User[])=>void}) {
-  const [query,setQuery]=useState(""); const [modal,setModal]=useState(false); const [editing,setEditing]=useState<User|null>(null);
-  const [form,setForm]=useState({fullName:"",email:"",password:"",role:"STUDENT",status:"ACTIVE"}); const [error,setError]=useState("");
-  const filtered=useMemo(()=>users.filter(u=>`${u.fullName} ${u.email} ${u.role}`.toLowerCase().includes(query.toLowerCase())),[users,query]);
-  function open(u?:User){setEditing(u||null);setForm({fullName:u?.fullName||"",email:u?.email||"",password:"",role:u?.role||"STUDENT",status:u?.status||"ACTIVE"});setError("");setModal(true);}
-  async function save(e:React.FormEvent){e.preventDefault();setError("");try{if(editing){const d=await api(`/users/${editing.id}`,{method:"PATCH",body:JSON.stringify({fullName:form.fullName,role:form.role,status:form.status})});setUsers(users.map(u=>u.id===editing.id?d.user:u));}else{const d=await api("/users",{method:"POST",body:JSON.stringify(form)});setUsers([d.user,...users]);}setModal(false);}catch(e){setError(e instanceof Error?e.message:"Unable to save user.");}}
-  async function deactivate(u:User){if(!confirm(`Deactivate ${u.fullName}'s account?`))return;try{await api(`/users/${u.id}`,{method:"DELETE"});setUsers(users.map(x=>x.id===u.id?{...x,status:"INACTIVE"}:x));}catch(e){alert(e instanceof Error?e.message:"Unable to deactivate user.");}}
-  return <div className="page-content"><div className="page-heading"><div><span className="eyebrow">ADMINISTRATION</span><h1>User Management</h1><p>Manage platform accounts, access roles and account status.</p></div><button className="primary-button" onClick={()=>open()}><Plus size={17}/> Add user</button></div>
-    <div className="user-summary"><div><b>{users.length}</b><span>Total accounts</span></div><div><b>{users.filter(u=>u.status==="ACTIVE").length}</b><span>Active users</span></div><div><b>{users.filter(u=>u.role==="EMPLOYER").length}</b><span>Employers</span></div><div><b>{users.filter(u=>u.role==="MENTOR").length}</b><span>Mentors</span></div></div>
-    <section className="panel table-panel"><div className="table-toolbar"><div><h3>All platform users</h3><span>{filtered.length} accounts found</span></div><div className="table-search"><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search users..."/></div></div>
-      <div className="table-scroll"><table><thead><tr><th>USER</th><th>ROLE</th><th>STATUS</th><th>EMAIL VERIFIED</th><th>JOINED</th><th>ACTIONS</th></tr></thead><tbody>{filtered.map(u=><tr key={u.id}><td><div className="table-user"><div className="avatar">{u.fullName.slice(0,1)}</div><div><b>{u.fullName}</b><span>{u.email}</span></div></div></td><td><span className="role-pill">{roleLabel[u.role]||u.role}</span></td><td><span className={`account-status ${u.status==="ACTIVE"?"active-status":"inactive-status"}`}>{u.status||"ACTIVE"}</span></td><td>{u.emailVerified?"Verified":"Pending"}</td><td>{u.createdAt?new Date((u as any).createdAt).toLocaleDateString():"—"}</td><td><div className="row-actions"><button title="Edit user" onClick={()=>open(u)}><Pencil size={16}/></button><button title="Deactivate user" onClick={()=>deactivate(u)}><UserX size={16}/></button></div></td></tr>)}</tbody></table>{filtered.length===0&&<div className="empty-state">No users match your search.</div>}</div>
-    </section>
-    {modal&&<div className="modal-backdrop" onClick={()=>setModal(false)}><div className="user-modal" onClick={e=>e.stopPropagation()}><div className="modal-heading"><div><span className="eyebrow">ACCOUNT DETAILS</span><h3>{editing?"Edit user":"Create new user"}</h3></div><button onClick={()=>setModal(false)}><X/></button></div><form onSubmit={save}><label>Full name<input required value={form.fullName} onChange={e=>setForm({...form,fullName:e.target.value})}/></label><label>Email address<input required type="email" disabled={!!editing} value={editing?editing.email:form.email} onChange={e=>setForm({...form,email:e.target.value})}/></label>{!editing&&<label>Temporary password<input required minLength={8} type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/></label>}<label>Role<select value={form.role} onChange={e=>setForm({...form,role:e.target.value})}><option value="STUDENT">Student</option><option value="JOB_SEEKER">Job Seeker</option><option value="EMPLOYER">Employer</option><option value="MENTOR">Mentor</option><option value="ADMIN">Administrator</option></select></label>{editing&&<label>Account status<select value={form.status} onChange={e=>setForm({...form,status:e.target.value})}><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option><option value="SUSPENDED">Suspended</option></select></label>}{error&&<div className="alert error">{error}</div>}<button className="primary-button full-button">Save user <ArrowRight size={16}/></button></form></div></div>}
-  </div>;
+const rolePermissions:Record<string,string[]>={ADMIN:["All platform modules","Manage users and roles","Moderate employers and jobs","Manage platform settings","View platform analytics"],STUDENT:["Career profile","Career guidance","Learning resources","Portfolio and skill passport","Community"],JOB_SEEKER:["Career guidance and roadmap","Jobs and applications","CV and resume studio","Interview preparation","Mentor connect"],EMPLOYER:["Company profile","Publish and manage jobs","Applicant management","Candidate shortlisting","Recruitment analytics"],MENTOR:["Mentor profile","Availability and sessions","Mentorship requests","Community participation"]};
+function PermissionsPage(){return <div className="page-content"><div className="page-heading"><div><span className="eyebrow">ADMINISTRATION</span><h1>Roles & Permissions</h1><p>Overview of the role capabilities defined for the SKILLNEX platform.</p></div></div><div className="notice-panel"><ShieldCheck size={19}/><div><b>Role-based access control</b><p>Current API access is enforced by the backend for administrator-only user management. Detailed per-feature permission editing is a planned backend enhancement.</p></div></div><div className="role-grid">{Object.entries(rolePermissions).map(([role,perms])=><section className="panel role-card" key={role}><div className="role-card-head"><ShieldCheck/><div><b>{roleLabel[role]}</b><small>{role}</small></div></div><ul>{perms.map(p=><li key={p}><CheckCircle2 size={15}/>{p}</li>)}</ul></section>)}</div></div>;}
+function SettingsPage({user}:{user:User}){const[tab,setTab]=useState("profile");const[notice,setNotice]=useState("");const[key,setKey]=useState(()=>{try{return JSON.parse(localStorage.getItem("skillnex_settings")||"{}")}catch{return {}}});const[profile,setProfile]=useState(()=>{try{return JSON.parse(localStorage.getItem("skillnex_profile")||"null")||{fullName:user.fullName,headline:"",location:"",bio:""}}catch{return {fullName:user.fullName,headline:"",location:"",bio:""}}});function update(k:string,v:any){setKey((p:any)=>({...p,[k]:v}));setNotice("");}function save(){localStorage.setItem("skillnex_settings",JSON.stringify(key));localStorage.setItem("skillnex_profile",JSON.stringify(profile));setNotice("Your preferences and profile draft have been saved on this device.");}
+ const tabs=[["profile","Profile",User],["appearance","Appearance",Sun],["notifications","Notifications",Bell],["security","Security",KeyRound],["privacy","Privacy",ShieldCheck],["language","Language",Globe]];
+ return <div className="page-content"><div className="page-heading"><div><span className="eyebrow">PREFERENCES</span><h1>Settings</h1><p>Manage your profile, account preferences, privacy and security.</p></div><button className="primary-button" onClick={save}><Save size={16}/> Save settings</button></div>
+ <div className="settings-layout"><nav className="settings-tabs">{tabs.map(([id,label,Icon]:any)=><button className={tab===id?"selected":""} key={id} onClick={()=>setTab(id)}><Icon size={17}/>{label}</button>)}</nav><section className="panel settings-panel">{notice&&<div className="alert success">{notice}</div>}
+ {tab==="profile"&&<><h2>Profile information</h2><p>Update the information shown in your professional workspace.</p><label>Full name<input value={profile.fullName} onChange={e=>setProfile({...profile,fullName:e.target.value})}/></label><label>Email address<input value={user.email} disabled/></label><label>Professional headline<input value={profile.headline} onChange={e=>setProfile({...profile,headline:e.target.value})} placeholder="e.g. HNDIT Undergraduate | Aspiring QA Engineer"/></label><label>Location<input value={profile.location} onChange={e=>setProfile({...profile,location:e.target.value})} placeholder="City, Country"/></label><label>About me<textarea value={profile.bio} onChange={e=>setProfile({...profile,bio:e.target.value})} placeholder="Write a short professional introduction"/></label><small className="helper-text">Profile editing API can be connected in the next backend enhancement. These profile form values are currently held in this session.</small></>}
+ {tab==="appearance"&&<><h2>Appearance</h2><p>Choose how SKILLNEX looks on this device.</p><div className="choice-row"><div><b>Colour theme</b><small>Black, white and grey interface</small></div><span className="role-pill">Monochrome</span></div><label className="toggle-row"><span><b>Reduce animations</b><small>Use fewer interface transitions</small></span><input type="checkbox" checked={!!key.reduceMotion} onChange={e=>update("reduceMotion",e.target.checked)}/></label><label className="toggle-row"><span><b>Compact layout</b><small>Reduce spacing in tables and cards</small></span><input type="checkbox" checked={!!key.compact} onChange={e=>update("compact",e.target.checked)}/></label><label className="toggle-row"><span><b>High contrast</b><small>Increase contrast for readability</small></span><input type="checkbox" checked={!!key.highContrast} onChange={e=>update("highContrast",e.target.checked)}/></label></>}
+ {tab==="notifications"&&<><h2>Notifications</h2><p>Choose which activity notifications you want to receive.</p>{[["emailUpdates","Email updates"],["jobAlerts","Job and internship alerts"],["learningReminders","Learning reminders"],["mentorUpdates","Mentor and community updates"],["securityAlerts","Security alerts"]].map(([k,l])=><label className="toggle-row" key={k}><span><b>{l}</b><small>Manage {l.toLowerCase()} for this account</small></span><input type="checkbox" checked={key[k]!==false} onChange={e=>update(k,e.target.checked)}/></label>)}</>}
+ {tab==="security"&&<><h2>Security</h2><p>Review account security options.</p><div className="choice-row"><div><b>Password</b><small>Use Forgot Password from the sign-in page to reset your password.</small></div><button className="secondary-button" onClick={()=>window.location.href="/forgot-password"}>Reset password</button></div><div className="choice-row"><div><b>Active session</b><small>Sign out to end the current session on this device.</small></div><span className="account-status active-status">Signed in</span></div><label className="toggle-row"><span><b>Remember this device</b><small>Keep me signed in when Remember Me is selected.</small></span><input type="checkbox" checked={key.rememberDevice!==false} onChange={e=>update("rememberDevice",e.target.checked)}/></label></>}
+ {tab==="privacy"&&<><h2>Privacy & data</h2><p>Manage profile visibility and data preferences.</p><label className="toggle-row"><span><b>Public professional profile</b><small>Allow your portfolio profile to be shared publicly when published.</small></span><input type="checkbox" checked={!!key.publicProfile} onChange={e=>update("publicProfile",e.target.checked)}/></label><label className="toggle-row"><span><b>Show skills on profile</b><small>Display your skills in your professional profile.</small></span><input type="checkbox" checked={key.showSkills!==false} onChange={e=>update("showSkills",e.target.checked)}/></label><div className="choice-row"><div><b>Account data</b><small>Data export and account deletion require secure backend workflows.</small></div><span className="account-status">Not configured</span></div></>}
+ {tab==="language"&&<><h2>Language & region</h2><p>Choose your preferred interface language and regional format.</p><label>Interface language<select value={key.language||"English"} onChange={e=>update("language",e.target.value)}><option>English</option><option>Sinhala</option><option>Tamil</option></select></label><label>Time zone<select value={key.timezone||"Asia/Colombo"} onChange={e=>update("timezone",e.target.value)}><option value="Asia/Colombo">Asia/Colombo (UTC+05:30)</option><option value="UTC">UTC</option><option value="Asia/Dubai">Asia/Dubai</option><option value="Europe/London">Europe/London</option></select></label><label>Date format<select value={key.dateFormat||"DD/MM/YYYY"} onChange={e=>update("dateFormat",e.target.value)}><option>DD/MM/YYYY</option><option>MM/DD/YYYY</option><option>YYYY-MM-DD</option></select></label></>}
+ </section></div></div>;
 }
-function Placeholder({title,desc,icon}:{title:string;desc:string;icon:any}) { return <div className="page-content"><div className="placeholder-panel panel"><div className="placeholder-icon">{icon}</div><span className="eyebrow">SKILLNEX WORKSPACE</span><h1>{title}</h1><p>{desc}</p><span className="coming-pill">MODULE FOUNDATION · COMING NEXT</span></div></div>; }
-
 export default App;

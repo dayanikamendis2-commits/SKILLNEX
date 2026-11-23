@@ -1,29 +1,43 @@
-# SKILLNEX MVP Scope
+# SKILLNEX Project Scope — Upgrade Build
 
-## Included in this starter
-1. Responsive application shell and dashboard.
-2. Authentication UI: sign in, sign up, forgot password, reset password and email verification.
-3. Secure password hashing and JWT authentication.
-4. Admin-only user management: list, create, edit, role assignment, status management and soft deactivation.
-5. PostgreSQL schema and Prisma seed.
-6. Dashboard summary endpoint.
+## Proposal-aligned modules represented in the web workspace
+1. Authentication and User Management
+2. AI Career DNA and Career Guidance
+3. Job and Internship Management
+4. AI Job Compatibility Engine
+5. AI CV and Resume Studio
+6. AI Skill Gap Analyzer
+7. AI Career Roadmap Generator
+8. AI Mock Interview Lab
+9. Learning and Development Center
+10. Professional Portfolio Builder
+11. Digital Skill Passport
+12. Career Market Insights
+13. Professional Communication Studio
+14. Mentor Connect and Professional Community
+15. Employer and Recruitment Management
+16. Administration and Platform Management
 
-## Important implementation notes
-- Password reset tokens expire after 30 minutes.
-- Email verification is required for newly registered non-admin accounts.
-- Configure SMTP before production use.
-- A development-only reset link is returned when SMTP is not configured. Never expose this in production.
-- The frontend currently stores a "remember me" token in localStorage and a non-remembered session token in sessionStorage. Before production, consider an HttpOnly Secure SameSite cookie strategy and CSRF protection.
-- Add server-side validation, stronger rate limits, structured logging, tests, backup strategy and deployment hardening before public launch.
+## Implemented in this upgrade
+- Centered sign-in, registration and password recovery pages.
+- Black, white and grey responsive visual theme.
+- Responsive sidebar navigation with a dedicated Sign Out control.
+- Module workspace pages with create, edit, search and delete interactions.
+- Browser-local persistence for module records and preferences.
+- Database-backed administrator user management using the existing API.
+- Existing roles: ADMIN, STUDENT, JOB_SEEKER, EMPLOYER and MENTOR.
+- Roles & Permissions overview.
+- Settings sections for profile draft, appearance, notifications, security, privacy and language/region.
 
-## Next development phases
-- Career profile and Career DNA assessment
-- Jobs, internships and applications
-- CV upload, CV studio and AI CV analysis
-- Skill gap analysis and career roadmap
-- Learning content and progress
-- Mock interview lab
-- Portfolio builder and public profile
-- Employer and mentor workspaces
-- Notifications, moderation, analytics and audit-log viewer
-- Dedicated React Native mobile applications
+## Not yet implemented as production services
+- Persisting each career module's records to PostgreSQL (module records are browser-local).
+- Python/FastAPI AI inference and external AI provider integration.
+- CV file parsing, ATS analysis and PDF generation.
+- Real job-board integration, employer verification and full application workflow.
+- Mentor booking, calendar synchronization and real-time community messaging.
+- Server-enforced granular permissions for every role and module.
+- Digital credential issuer verification, QR code services and secure document storage.
+- Audit-log administration UI, platform-wide moderation and advanced analytics.
+- React Native mobile application, Socket.IO services, Docker and Swagger/OpenAPI deployment setup.
+
+AI module pages are input/record workspaces only until a real AI service is configured. The interface does not claim that placeholder records are AI-generated analysis.
