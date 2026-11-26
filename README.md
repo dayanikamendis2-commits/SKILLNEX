@@ -126,3 +126,47 @@ The user-management API is database-backed. Other proposal module records and br
 
 ## Security
 Never upload `.env` files, database passwords, SMTP credentials or JWT secrets to GitHub. Replace the seeded administrator password before using the app beyond local development.
+
+## Recruitment Hub (added in this build)
+- Employer job creation with draft/publish status, salary range, work mode, employment type, skills and closing date.
+- Job discovery, keyword search, saved jobs and application submission for Student / Job Seeker accounts.
+- Candidate application tracking and employer applicant inbox with status updates.
+- Interview scheduling and interview list.
+- Job-alert search preferences (notification delivery requires a notification worker and configured SMTP provider).
+- ATS-style CV text review using transparent skill-keyword comparison. It is an assistive checklist, not a certified ATS score or AI hiring decision.
+- Recruitment records are stored in PostgreSQL through Prisma, not browser localStorage.
+
+### Database update
+The Prisma schema now includes jobs, applications, saved jobs, interviews, job-alert preferences and OAuth provider identity fields. Back up your database first, then from `backend` run:
+
+```powershell
+npx prisma migrate dev --name recruitment_and_social_auth
+npx prisma generate
+```
+
+Do not run `prisma migrate reset` against a database containing records.
+
+### Google and Facebook sign-in setup
+Create OAuth applications in the Google Cloud Console and Meta for Developers. Add these callback URLs to the provider configuration:
+- Google: `http://localhost:5000/api/auth/google/callback`
+- Facebook: `http://localhost:5000/api/auth/facebook/callback`
+
+Set the credentials in `backend/.env` (never commit this file):
+
+```env
+API_PUBLIC_URL="http://localhost:5000"
+GOOGLE_CLIENT_ID="your-google-client-id"
+GOOGLE_CLIENT_SECRET="your-google-client-secret"
+FACEBOOK_APP_ID="your-facebook-app-id"
+FACEBOOK_APP_SECRET="your-facebook-app-secret"
+```
+
+For production, change `API_PUBLIC_URL` and `CLIENT_URL` to your HTTPS deployment domains and register the matching HTTPS callback URLs with both providers. Social sign-in buttons return a clear configuration error until valid credentials are supplied.
+
+
+## Latest workspace enhancements
+- Role-specific dashboard content and role-filtered sidebar navigation for all five account types.
+- Employer recruitment overview counters.
+- Employer-owned vacancy status controls backed by an authenticated API endpoint.
+- Existing visual theme, component styling and responsive shell retained.
+- See `docs/PROJECT_SCOPE.md` for implemented functionality and remaining service-integration boundaries.
